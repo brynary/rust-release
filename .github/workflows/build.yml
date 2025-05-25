@@ -3,12 +3,11 @@ on:
   # push:
   #   branches:
   #     - main
-  #   tags:
-  #     - 'v*'
   # pull_request:
   #   branches:
   #     - main
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -20,28 +19,36 @@ jobs:
           # Linux with glibc
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-22.04
+            archive_format: tar.xz
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-22.04-arm
+            archive_format: tar.xz
 
           # Linux with musl
           - target: x86_64-unknown-linux-musl
             runner: ubuntu-22.04
             packages_install: sudo apt-get update && sudo apt-get install musl-tools
+            archive_format: tar.xz
           - target: aarch64-unknown-linux-musl
             runner: ubuntu-22.04-arm
             packages_install: sudo apt-get update && sudo apt-get install musl-tools
+            archive_format: tar.xz
 
           # macOS
           - target: x86_64-apple-darwin
             runner: macos-15
+            archive_format: tar.xz
           - target: aarch64-apple-darwin
             runner: macos-15
+            archive_format: tar.xz
 
           # Windows
           - target: x86_64-pc-windows-msvc
             runner: windows-latest
-    name: compile (${{ matrix.target }})
+            archive_format: zip
+    name: build ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
+    if: ${{ github.event_name == 'workflow_call' || github.event.head_commit.author.name != 'brynary-releases[bot]' }}
     env:
       BINARY_NAME: cli
     steps:
@@ -49,21 +56,25 @@ jobs:
         run: |
           git config --global core.longpaths true
           git config --global core.autocrlf false
+      
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+      
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.runner }}
           cache-on-failure: true
           cache-all-crates: true
+      
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
@@ -73,8 +84,27 @@ jobs:
           cargo build --target ${{ matrix.target }} --all-features --release
           cargo test --target ${{ matrix.target }} --all-features --release
       
+      - name: Package artifacts
+        run: |
+          mkdir -p package
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} package/
+          cp README.md package/
+          cp LICENSE.md package/
+          cp CHANGELOG.md package/
+          if [ "${{ matrix.archive_format }}" = "zip" ]; then
+            zip -r ${{ env.BINARY_NAME }}-${{ matrix.target }}.zip package
+          else
+            tar -cJf ${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.xz -C package .
+          fi
+
+      - name: Generate SHA256 signature
+        run: sha256sum ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }} > ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}.sha256
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
+          name: artifacts-${{ env.BINARY_NAME }}-${{ matrix.target }}
+          if-no-files-found: error
+          path: |
+            ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}
+            ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}.sha256
