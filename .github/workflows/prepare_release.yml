@@ -29,13 +29,6 @@ jobs:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-      # - name: Lock repository
-      #   env:
-      #     GH_TOKEN: ${{ steps.app-token.outputs.token }}
-      #   run: |
-      #     gh api -X PUT repos/qltysh/qlty/branches/main/protection \
-      #       -F enforce_admins=true -F lock_branch=true \
-      #       -F required_pull_request_reviews=null -F required_status_checks=null -F restrictions=null
       - name: Git config
         run: |
           git config --global core.longpaths true

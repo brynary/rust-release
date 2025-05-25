@@ -11,20 +11,25 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # - name: Print GitHub event payload
-      #   run: echo "${{ toJson(github.event) }}"
-
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+      
+      - name: Get GitHub App User ID
+        id: get-user-id
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Git config
         run: |
           git config --global core.longpaths true
           git config --global core.autocrlf false
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,6 +52,48 @@ jobs:
       
       - name: List artifacts
         run: find target/distrib/
+      
+      - name: Extract version number from commit message
+        id: version
+        run: |
+          # Extract the version number from the commit message
+          VERSION=$(git log -1 --pretty=%B | grep -oP 'Release \K[0-9]+\.[0-9]+\.[0-9]+')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      
+      - name: Create and push release tag
+        id: tag
+        run: |
+          # Create a new tag for the release
+          TAG="v${{ steps.version.outputs.version }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      
+      - name: Create GitHub Release
+        env:
+          PRERELEASE_FLAG: "${{ false && '--prerelease' || '' }}"
+          ANNOUNCEMENT_TITLE: "Release ${{ steps.tag.outputs.tag }}"
+          ANNOUNCEMENT_BODY: "Automated release created by GitHub Actions."
+          RELEASE_COMMIT: "${{ github.sha }}"
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          # Write and read notes from a file to avoid quoting breaking things
+          echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
+          gh release create "${{ steps.tag.outputs.tag }}" --target "$(git rev-list -n 1 ${{ steps.tag.outputs.tag }})" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" artifacts/*
+
+      # - name: Create GitHub Release
+      #   env:
+      #     GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      #   run: |
+      #     # Determine release tag (use existing tag on HEAD or create one)
+      #     TAG=$(git tag --points-at HEAD)
+      #     if [ -z "$TAG" ]; then
+      #       TAG="v$(date +'%Y%m%d%H%M%S')"
+      #       git tag "$TAG"
+      #     fi
+      #     echo "Creating release for tag: $TAG"
+      #     # Create the GitHub Release using the GitHub CLI
+      #     gh release create "$TAG" --target "$(git rev-parse HEAD)" --title "Release $TAG" --notes "Automated release created by GitHub Actions." artifacts/*
 
 #     - name: Bump version
 #       run: cargo release version --execute --no-confirm ${{ needs.plan.outputs.version }}
@@ -64,27 +111,6 @@ jobs:
 
 #         cp dist-manifest.json "$BUILD_MANIFEST_NAME"
 
-#     - name: "Upload artifacts"
-#       uses: actions/upload-artifact@v4
-#       env:
-#         GITHUB_WORKSPACE: ${{ github.workspace }}
-#       with:
-#         name: artifacts-build-global
-#         if-no-files-found: error
-#         path: |
-#           ${{ steps.cargo-dist.outputs.paths }}
-#           ${{ env.GITHUB_WORKSPACE }}/${{ env.BUILD_MANIFEST_NAME }}
-
-# host:
-#   needs:
-#     - plan
-#     - build-local-artifacts
-#     - build-global-artifacts
-#   # Only run if we're "publishing", and only if local and global didn't fail (skipped is fine)
-#   if: ${{ always() && needs.plan.outputs.publishing == 'true' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
-#   runs-on: ubuntu-latest
-#   outputs:
-#     manifest: ${{ steps.host.outputs.manifest }}
 #   steps:
 #     - id: host
 #       shell: bash
@@ -116,12 +142,6 @@ jobs:
 #         role-session-name: github-actions
 #         aws-region: ${{ env.AWS_REGION }}
 
-#     - name: Fetch artifacts
-#       uses: actions/download-artifact@v4
-#       with:
-#         pattern: artifacts-*
-#         path: artifacts/
-#         merge-multiple: true
 
 #     - name: Upload to S3
 #       working-directory: artifacts
@@ -132,11 +152,6 @@ jobs:
 #         aws s3 cp --recursive $S3_PREFIX/${{ needs.plan.outputs.tag }}/ $S3_PREFIX/latest/
 
 
-#     - name: Get GitHub App User ID
-#       id: get-user-id
-#       run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
-#       env:
-#         GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
 #     # Configure git, remove the action token form headers and add the app token
 #     - name: Configure git for release commit
@@ -152,35 +167,3 @@ jobs:
 #           git tag ${{ needs.plan.outputs.tag }}
 #           git push origin main ${{ needs.plan.outputs.tag }}
 
-
-#     - name: Create GitHub Release
-#       env:
-#         PRERELEASE_FLAG: "${{ fromJson(needs.host.outputs.manifest).announcement_is_prerelease && '--prerelease' || '' }}"
-#         ANNOUNCEMENT_TITLE: "${{ fromJson(needs.host.outputs.manifest).announcement_title }}"
-#         ANNOUNCEMENT_BODY: "${{ fromJson(needs.host.outputs.manifest).announcement_github_body }}"
-#         RELEASE_COMMIT: "${{ github.sha }}"
-#         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-#       run: |
-#         # Write and read notes from a file to avoid quoting breaking things
-#         echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
-#         gh release create "${{ needs.plan.outputs.tag }}" --target "$(git rev-list -n 1 ${{ needs.plan.outputs.tag }})" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" artifacts/*
-
-# unlock:
-#   if: always()
-#   needs:
-#     - announce
-#   runs-on: ubuntu-latest
-#   steps:
-#     - uses: actions/create-github-app-token@v1
-#       id: app-token
-#       with:
-#         app-id: ${{ vars.QLTY_APP_ID }}
-#         private-key: ${{ secrets.QLTY_APP_PRIVATE_KEY }}
-#         owner: ${{ github.repository_owner }}
-#     - name: Unlock qlty
-#       env:
-#         GH_TOKEN: ${{ steps.app-token.outputs.token }}
-#       run: |
-#         gh api -X PUT repos/qltysh/qlty/branches/main/protection \
-#           -F enforce_admins=null -F lock_branch=false \
-#           -F required_pull_request_reviews=null -F required_status_checks=null -F restrictions=null
