@@ -66,7 +66,7 @@ jobs:
           # Create a new tag for the release
           TAG="v${{ steps.version.outputs.version }}"
           git tag "$TAG"
-          git push https://${{ steps.app-token.outputs.token }}@github.com/brynary/rust-release.git "$TAG"
+          git push https://oauth2:${{ steps.app-token.outputs.token }}@github.com/brynary/rust-release.git "$TAG"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
