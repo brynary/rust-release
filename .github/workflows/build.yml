@@ -8,6 +8,7 @@ on:
   workflow_call:
 permissions:
   contents: read
+  attestations: write
 jobs:
   compile:
     strategy:
@@ -44,7 +45,7 @@ jobs:
           - target: x86_64-pc-windows-msvc
             runner: windows-latest
             archive_format: zip
-    name: build ${{ matrix.target }}
+    name: ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
     env:
       BINARY_NAME: cli
@@ -101,6 +102,11 @@ jobs:
 
       - name: Generate SHA256 signature
         run: sha256sum ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }} > ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}.sha256
+      
+      - name: Generate binary attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
