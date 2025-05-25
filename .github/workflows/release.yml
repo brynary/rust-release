@@ -57,12 +57,12 @@ jobs:
       - name: List artifacts
         run: find target/distrib/
       
-      - name: Extract version number from commit message
+      - name: Retrieve version number using cargo-release
         id: version
         run: |
-          # Extract the version number from the commit message
-          VERSION=$(git log -1 --pretty=%B | grep -oP 'Release \K[0-9]+\.[0-9]+\.[0-9]+')
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Get the version number from the Cargo.toml file
+          VERSION=$(cargo metadata --format-version 1 | jq -r ".workspace_members[0]" | cut -d# -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT" 
       
       - name: Create and push release tag
         id: tag
