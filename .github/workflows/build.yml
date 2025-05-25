@@ -112,16 +112,6 @@ jobs:
             ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}.sha256
 
   release:
-    runs-on: ubuntu-latest
-    needs: compile
-    if: ${{ github.event_name == 'push' && github.event.commits[0].author.name == 'brynary-releases[bot]' && startsWith(github.event.commits[0].message, 'Release ')}}
-    steps:
-      - name: Extract version from commit message
-        if: ${{ github.event.commits[0].author.name == 'brynary-releases[bot]' && startsWith(github.event.commits[0].message, 'Release ') }}
-        id: extract_version
-        run: echo "version=$(echo '${{ github.event.commits[0].message }}' | sed 's/^Release //')" >> $GITHUB_OUTPUT
-
-      - name: Trigger release workflow
-        uses: brynary/rust-release/.github/workflows/release.yml@main
-        with:
-          version: ${{ steps.extract_version.outputs.version }}
+    uses: brynary/rust-release/.github/workflows/release.yml@main
+    with:
+      workflow_run_id: ${{ github.event.workflow_run.id }}

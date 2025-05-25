@@ -2,8 +2,7 @@ name: Release
 on:
   workflow_call:
     inputs:
-      version:
-        description: "The version to release"
+      workflow_run_id:
         required: true
         type: string
 permissions:
@@ -41,6 +40,7 @@ jobs:
       - name: Fetch local artifacts
         uses: actions/download-artifact@v4
         with:
+          run-id: ${{ inputs.workflow_run_id }}
           pattern: artifacts-*
           path: target/distrib/
           merge-multiple: true
