@@ -1,0 +1,43 @@
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: "How to increment version (use `version` to specify version)"
+        required: true
+        type: choice
+        default: minor
+        options:
+          - major
+          - minor
+          - patch
+          - version
+      version:
+        description: "The version to release (specify `version` increment value)"
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git config
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install cargo-release
+        uses: jaxxstorm/action-install-gh-release@v1.14.0
+        with:
+          repo: crate-ci/cargo-release
+          tag: v0.25.17
+      - name: Bump version
+        id: version
+        run: |
+          cargo release version \
+            --execute \
+            --no-confirm \
+            ${{ inputs.increment == 'version' && inputs.version || inputs.increment || 'minor' }}

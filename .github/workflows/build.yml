@@ -41,6 +41,8 @@ jobs:
             runner: windows-latest
     name: compile (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
+    env:
+      BINARY_NAME: cli
     steps:
       - name: Git config
         run: |
@@ -73,5 +75,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: compile-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/cli
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
