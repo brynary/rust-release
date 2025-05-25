@@ -40,7 +40,7 @@ jobs:
           - target: x86_64-pc-windows-msvc
             runner: windows-latest
     name: compile (${{ matrix.target }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Git config
         run: |
