@@ -112,6 +112,8 @@ jobs:
             ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}.sha256
 
   release:
+    needs: compile
     uses: brynary/rust-release/.github/workflows/release.yml@main
     with:
       workflow_run_id: ${{ github.event.workflow_run.id }}
+    secrets: inherit
