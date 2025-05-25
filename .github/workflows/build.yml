@@ -1,11 +1,9 @@
 name: Build
 on:
-  # push:
-  #   branches:
-  #     - main
-  # pull_request:
-  #   branches:
-  #     - main
+  push:
+    branches:
+      - main
+  pull_request:
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -48,7 +46,6 @@ jobs:
             archive_format: zip
     name: build ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
-    if: ${{ github.event_name == 'workflow_call' || github.event.head_commit.author.name != 'brynary-releases[bot]' }}
     env:
       BINARY_NAME: cli
     steps:
@@ -108,3 +105,15 @@ jobs:
           path: |
             ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}
             ${{ env.BINARY_NAME }}-${{ matrix.target }}.${{ matrix.archive_format }}.sha256
+      
+
+      - name: Extract version from commit message
+        if: ${{ github.event_name == 'workflow_call' && github.event.commits[0].author.name == 'brynary-releases[bot]' && startsWith(github.event.commits[0].message, 'Release ') }}
+        id: extract_version
+        run: echo "version=$(echo '${{ github.event.commits[0].message }}' | sed 's/^Release //')" >> $GITHUB_OUTPUT
+
+      - name: Trigger release workflow
+        if: ${{ github.event_name == 'workflow_call' && github.event.commits[0].author.name == 'brynary-releases[bot]' && startsWith(github.event.commits[0].message, 'Release ') }}
+        uses: ./.github/workflows/release.yml
+        with:
+          version: ${{ steps.extract_version.outputs.version }}

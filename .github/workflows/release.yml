@@ -1,14 +1,16 @@
 name: Release
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      version:
+        description: "The version to release"
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: ${{ github.event.commits[0].author.name == 'brynary-releases[bot]' && startsWith(github.event.commits[0].message, 'Release ') }}
     steps:
       # - name: Print GitHub event payload
       #   run: echo "${{ toJson(github.event) }}"
