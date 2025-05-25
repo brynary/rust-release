@@ -1,0 +1,69 @@
+on:
+  # push:
+  #   branches:
+  #     - main
+  #   tags:
+  #     - 'v*'
+  # pull_request:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux with glibc
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04
+
+          # Linux with musl
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-22.04
+            packages_install: sudo apt-get update && sudo apt-get install musl-tools
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-22.04
+            packages_install: sudo apt-get update && sudo apt-get install musl-tools
+
+          # macOS
+          - target: x86_64-apple-darwin
+            runner: macos-15
+          - target: aarch64-apple-darwin
+            runner: macos-15
+
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+    name: compile (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git config
+        run: |
+          git config --global core.longpaths true
+          git config --global core.autocrlf false
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.runner }}
+          cache-on-failure: true
+          cache-all-crates: true
+      - name: Install dependencies
+        run: |
+          ${{ matrix.packages_install }}
+      - name: Build
+        run: |
+          cargo build --target ${{ matrix.target }} --all-features --release
+          cargo test --target ${{ matrix.target }} --all-features --release
