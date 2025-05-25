@@ -69,3 +69,9 @@ jobs:
         run: |
           cargo build --target ${{ matrix.target }} --all-features --release
           cargo test --target ${{ matrix.target }} --all-features --release
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/cli
