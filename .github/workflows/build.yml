@@ -51,7 +51,7 @@ jobs:
       BINARY_NAME: cli
     steps:
       - name: Print GitHub event context
-        run: echo "${{ toJson(github) }}"
+        run: echo '${{ toJson(github) }}'
         shell: bash
 
       - name: Git config
