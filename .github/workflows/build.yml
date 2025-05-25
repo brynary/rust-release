@@ -5,7 +5,6 @@ on:
       - main
   pull_request:
   workflow_dispatch:
-  workflow_call:
 permissions:
   contents: read
   attestations: write
@@ -51,6 +50,10 @@ jobs:
     env:
       BINARY_NAME: cli
     steps:
+      - name: Print GitHub event context
+        run: echo "${{ toJson(github) }}"
+        shell: bash
+
       - name: Git config
         run: |
           git config --global core.longpaths true
@@ -120,6 +123,7 @@ jobs:
 
   release:
     needs: compile
+    if: ${{ github.event_name == 'push' && github.event.commits[0].author.name == 'brynary-releases[bot]' && startsWith(github.event.commits[0].message, 'Release ')}}
     uses: brynary/rust-release/.github/workflows/release.yml@main
     with:
       workflow_run_id: ${{ github.event.workflow_run.id }}

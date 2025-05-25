@@ -58,7 +58,7 @@ jobs:
         run: |
           # Get the version number from the Cargo.toml file
           VERSION=$(cargo metadata --format-version 1 | jq -r ".workspace_members[0]" | cut -d# -f2)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT" 
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       
       - name: Create and push release tag
         id: tag
