@@ -16,11 +16,25 @@ on:
         required: false
         type: string
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 jobs:
-  compile:
+  run:
     runs-on: ubuntu-latest
     steps:
+      # - uses: actions/create-github-app-token@v1
+      #   id: app-token
+      #   with:
+      #     app-id: ${{ vars.QLTY_APP_ID }}
+      #     private-key: ${{ secrets.QLTY_APP_PRIVATE_KEY }}
+      #     owner: ${{ github.repository_owner }}
+      # - name: Lock repository
+      #   env:
+      #     GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      #   run: |
+      #     gh api -X PUT repos/qltysh/qlty/branches/main/protection \
+      #       -F enforce_admins=true -F lock_branch=true \
+      #       -F required_pull_request_reviews=null -F required_status_checks=null -F restrictions=null
       - name: Git config
         run: |
           git config --global core.longpaths true
@@ -41,3 +55,13 @@ jobs:
             --execute \
             --no-confirm \
             ${{ inputs.increment == 'version' && inputs.version || inputs.increment || 'minor' }}
+          
+          echo "version=$(cargo metadata --format-version 1 | jq -r ".workspace_members[0]" | cut -d# -f2)" >> "$GITHUB_OUTPUT"
+      - name: Commit changes
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: Release ${{ steps.version.outputs.version }}
+          body: Automated PR for release ${{ steps.version.outputs.version }}
+          branch: fmt
+          sign-commits: true
+          commit-message: Release ${{ steps.version.outputs.version }}
