@@ -11,10 +11,6 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Print GitHub event payload
-        shell: bash
-        run: echo "${{ toJson(github.event) }}"
-
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
