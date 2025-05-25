@@ -122,6 +122,6 @@ jobs:
         run: echo "version=$(echo '${{ github.event.commits[0].message }}' | sed 's/^Release //')" >> $GITHUB_OUTPUT
 
       - name: Trigger release workflow
-        uses: ./.github/workflows/release.yml
+        uses: brynary/rust-release/.github/workflows/release.yml@main
         with:
           version: ${{ steps.extract_version.outputs.version }}
