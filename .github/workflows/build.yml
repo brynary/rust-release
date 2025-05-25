@@ -20,14 +20,14 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             runner: ubuntu-22.04
           - target: aarch64-unknown-linux-gnu
-            runner: ubuntu-22.04
+            runner: ubuntu-22.04-arm
 
           # Linux with musl
           - target: x86_64-unknown-linux-musl
             runner: ubuntu-22.04
             packages_install: sudo apt-get update && sudo apt-get install musl-tools
           - target: aarch64-unknown-linux-musl
-            runner: ubuntu-22.04
+            runner: ubuntu-22.04-arm
             packages_install: sudo apt-get update && sudo apt-get install musl-tools
 
           # macOS
