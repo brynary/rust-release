@@ -8,40 +8,43 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: github.event.head_commit.author.name == 'brynary-releases[bot]'
+    # if: github.event.head_commit.author.name == 'brynary-releases[bot]'
     steps:
-      - uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+      - name: Print head commit author
+        run: echo "Author: ${{ github.event.head_commit.author.name }}"
 
-      - name: Git config
-        run: |
-          git config --global core.longpaths true
-          git config --global core.autocrlf false
+      # - uses: actions/create-github-app-token@v1
+      #   id: app-token
+      #   with:
+      #     app-id: ${{ vars.RELEASE_APP_ID }}
+      #     private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      #     owner: ${{ github.repository_owner }}
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      # - name: Git config
+      #   run: |
+      #     git config --global core.longpaths true
+      #     git config --global core.autocrlf false
 
-      - name: Install cargo-release
-        uses: jaxxstorm/action-install-gh-release@v1.14.0
-        with:
-          repo: crate-ci/cargo-release
-          tag: v0.25.17
+      # - name: Checkout
+      #   uses: actions/checkout@v4
+      #   with:
+      #     fetch-depth: 0
 
-      - name: Fetch local artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: artifacts-*
-          path: target/distrib/
-          merge-multiple: true
+      # - name: Install cargo-release
+      #   uses: jaxxstorm/action-install-gh-release@v1.14.0
+      #   with:
+      #     repo: crate-ci/cargo-release
+      #     tag: v0.25.17
+
+      # - name: Fetch local artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     pattern: artifacts-*
+      #     path: target/distrib/
+      #     merge-multiple: true
       
-      - name: List artifacts
-        run: find target/distrib/
+      # - name: List artifacts
+      #   run: find target/distrib/
 
 #     - name: Bump version
 #       run: cargo release version --execute --no-confirm ${{ needs.plan.outputs.version }}
