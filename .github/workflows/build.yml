@@ -90,7 +90,11 @@ jobs:
           cp LICENSE.md package/
           cp CHANGELOG.md package/
           if [ "${{ matrix.archive_format }}" = "zip" ]; then
-            zip -r ${{ env.BINARY_NAME }}-${{ matrix.target }}.zip package
+            if [ "$RUNNER_OS" = "Windows" ]; then
+              powershell -Command "Compress-Archive -Path package -DestinationPath '${{ env.BINARY_NAME }}-${{ matrix.target }}.zip'"
+            else
+              zip -r ${{ env.BINARY_NAME }}-${{ matrix.target }}.zip package
+            fi
           else
             tar -cJf ${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.xz -C package .
           fi
