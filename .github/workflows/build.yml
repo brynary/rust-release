@@ -82,6 +82,7 @@ jobs:
           cargo test --target ${{ matrix.target }} --all-features --release
       
       - name: Package artifacts
+        shell: bash
         run: |
           mkdir -p package
           cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} package/
