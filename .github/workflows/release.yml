@@ -11,7 +11,8 @@ jobs:
     # if: github.event.head_commit.author.name == 'brynary-releases[bot]'
     steps:
       - name: Print head commit author
-        run: echo "Author: ${{ github.event.head_commit.author.name }}"
+        run: |
+          echo "${{ github.event.head_commit.author.name }}"
 
       # - uses: actions/create-github-app-token@v1
       #   id: app-token
