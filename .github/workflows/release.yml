@@ -60,14 +60,18 @@ jobs:
           VERSION=$(cargo metadata --format-version 1 | jq -r ".workspace_members[0]" | cut -d# -f2)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       
-      - name: Create and push release tag
+      - name: Create release tag via GitHub API
         id: tag
-        run: |
-          # Create a new tag for the release
-          TAG="v${{ steps.version.outputs.version }}"
-          git tag "$TAG"
-          git push https://oauth2:${{ steps.app-token.outputs.token }}@github.com/brynary/rust-release.git "$TAG"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        uses: octokit/request-action@v2.x
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+        with:
+          route: POST /repos/${{ github.repository }}/git/refs
+          ref: "refs/tags/v${{ steps.version.outputs.version }}"
+          sha: ${{ github.sha }}
+
+      - name: Set tag output
+        run: echo "tag=v${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         env:
