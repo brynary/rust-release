@@ -70,20 +70,17 @@ jobs:
           ref: "refs/tags/v${{ steps.version.outputs.version }}"
           sha: ${{ github.sha }}
 
-      - name: Set tag output
-        run: echo "tag=v${{ steps.version.outputs.version }}" >> "$GITHUB_OUTPUT"
-
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ false && '--prerelease' || '' }}"
-          ANNOUNCEMENT_TITLE: "Release ${{ steps.tag.outputs.tag }}"
+          ANNOUNCEMENT_TITLE: "Release v${{ steps.version.outputs.version }}""
           ANNOUNCEMENT_BODY: "Automated release created by GitHub Actions."
           RELEASE_COMMIT: "${{ github.sha }}"
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           # Write and read notes from a file to avoid quoting breaking things
           echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
-          gh release create "${{ steps.tag.outputs.tag }}" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" target/distrib/*
+          gh release create "v${{ steps.version.outputs.version }}"" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" target/distrib/*
 
       # - name: Create GitHub Release
       #   env:
