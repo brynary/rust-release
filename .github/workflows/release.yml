@@ -73,7 +73,7 @@ jobs:
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ false && '--prerelease' || '' }}"
-          ANNOUNCEMENT_TITLE: "Release v${{ steps.version.outputs.version }}""
+          ANNOUNCEMENT_TITLE: "Release v${{ steps.version.outputs.version }}"
           ANNOUNCEMENT_BODY: "Automated release created by GitHub Actions."
           RELEASE_COMMIT: "${{ github.sha }}"
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
