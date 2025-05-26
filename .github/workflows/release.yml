@@ -10,6 +10,9 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: v${{ steps.version.outputs.version }}
     steps:
       - uses: actions/create-github-app-token@v1
         id: app-token
@@ -81,90 +84,27 @@ jobs:
           # Write and read notes from a file to avoid quoting breaking things
           echo "$ANNOUNCEMENT_BODY" > $RUNNER_TEMP/notes.txt
           gh release create "v${{ steps.version.outputs.version }}" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" target/distrib/*
+  
+  # s3-upload:
+  #   needs: release
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     AWS_REGION: us-east-1
+  #     AWS_ROLE_ARN: arn:aws:iam::654654321074:role/qlty-github-actions
+  #     AWS_ROLE_SESSION_NAME: github-actions
+  #     AWS_S3_DESTINATION: s3://qlty-releases/qlty
+  #   steps:
+  #     - name: Setup AWS CLI
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ env.AWS_ROLE_ARN }}
+  #         role-session-name: ${{ env.AWS_ROLE_SESSION_NAME }}
+  #         aws-region: ${{ env.AWS_REGION }}
 
-      # - name: Create GitHub Release
-      #   env:
-      #     GH_TOKEN: ${{ steps.app-token.outputs.token }}
-      #   run: |
-      #     # Determine release tag (use existing tag on HEAD or create one)
-      #     TAG=$(git tag --points-at HEAD)
-      #     if [ -z "$TAG" ]; then
-      #       TAG="v$(date +'%Y%m%d%H%M%S')"
-      #       git tag "$TAG"
-      #     fi
-      #     echo "Creating release for tag: $TAG"
-      #     # Create the GitHub Release using the GitHub CLI
-      #     gh release create "$TAG" --target "$(git rev-parse HEAD)" --title "Release $TAG" --notes "Automated release created by GitHub Actions." artifacts/*
-
-#     - name: Bump version
-#       run: cargo release version --execute --no-confirm ${{ needs.plan.outputs.version }}
-
-#     - id: cargo-dist
-#       shell: bash
-#       run: |
-#         cargo dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
-#         echo "cargo dist ran successfully"
-
-#         # Parse out what we just built and upload it to scratch storage
-#         echo "paths<<EOF" >> "$GITHUB_OUTPUT"
-#         jq --raw-output ".upload_files[]" dist-manifest.json >> "$GITHUB_OUTPUT"
-#         echo "EOF" >> "$GITHUB_OUTPUT"
-
-#         cp dist-manifest.json "$BUILD_MANIFEST_NAME"
-
-#   steps:
-#     - id: host
-#       shell: bash
-#       run: |
-#         cargo dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
-#         echo "artifacts uploaded and released successfully"
-#         cat dist-manifest.json
-#         echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
-
-#     - name: "Upload dist-manifest.json"
-#       uses: actions/upload-artifact@v4
-#       with:
-#         # Overwrite the previous copy
-#         name: artifacts-dist-manifest
-#         path: ${{ github.workspace }}/dist-manifest.json
-#         if-no-files-found: error
-
-# upload:
-#   env:
-#     AWS_REGION: us-east-1
-#     ROLE_NAME: qlty-github-actions
-#     QLTY_TEST_RELEASES_AWS_ACCOUNT_ID: 654654321074
-#     QLTY_RELEASES_PUBLIC_BUCKET: qlty-releases
-#   steps:
-#     - name: Setup AWS CLI
-#       uses: aws-actions/configure-aws-credentials@v4
-#       with:
-#         role-to-assume: arn:aws:iam::${{ env.QLTY_TEST_RELEASES_AWS_ACCOUNT_ID }}:role/${{ env.ROLE_NAME }}
-#         role-session-name: github-actions
-#         aws-region: ${{ env.AWS_REGION }}
-
-
-#     - name: Upload to S3
-#       working-directory: artifacts
-#       env:
-#         S3_PREFIX: s3://${{ env.QLTY_RELEASES_PUBLIC_BUCKET }}/qlty
-#       run: |
-#         aws s3 cp --recursive . $S3_PREFIX/${{ needs.plan.outputs.tag }}/
-#         aws s3 cp --recursive $S3_PREFIX/${{ needs.plan.outputs.tag }}/ $S3_PREFIX/latest/
-
-
-
-#     # Configure git, remove the action token form headers and add the app token
-#     - name: Configure git for release commit
-#       run: |
-#         git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
-#         git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com>'
-
-# - name: Bump qlty version
-#         run: |
-#           cargo release version --no-confirm --execute ${{ needs.plan.outputs.version }}
-#           git add Cargo.*
-#           git commit -m "🚀 Release: ${{ needs.plan.outputs.tag }}"
-#           git tag ${{ needs.plan.outputs.tag }}
-#           git push origin main ${{ needs.plan.outputs.tag }}
-
+  #     - name: Upload to S3
+  #       working-directory: target/distrib
+  #       env:
+  #         AWS_S3_DESTINATION: ${{ env.AWS_S3_DESTINATION }}
+  #       run: |
+  #         aws s3 cp --recursive . $AWS_S3_DESTINATION/${{ needs.release.outputs.tag }}/
+  #         aws s3 cp --recursive $AWS_S3_DESTINATION/${{ needs.release.outputs.tag }}/ $AWS_S3_DESTINATION/latest/
